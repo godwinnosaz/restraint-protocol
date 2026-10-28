@@ -41,6 +41,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.brainiactechne.restraintprotocol.data.LocalFirstRepository
 import com.brainiactechne.restraintprotocol.ui.theme.Amber
 import com.brainiactechne.restraintprotocol.ui.theme.Cream
 import com.brainiactechne.restraintprotocol.ui.theme.Ink
@@ -59,6 +61,7 @@ import com.brainiactechne.restraintprotocol.ui.theme.Sage
 import com.brainiactechne.restraintprotocol.ui.theme.SurfaceDark
 import com.brainiactechne.restraintprotocol.ui.theme.SurfaceRaised
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private val RpColors = darkColorScheme(
     primary = Amber,
@@ -90,6 +93,8 @@ private fun RestraintApp() {
     val preferences = remember(context) {
         context.getSharedPreferences("rp_commitments", Context.MODE_PRIVATE)
     }
+    val repository = remember(context) { LocalFirstRepository(context) }
+    val scope = rememberCoroutineScope()
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var deadline by remember {
         mutableLongStateOf(preferences.getLong("restriction_deadline", 0L))
@@ -104,6 +109,21 @@ private fun RestraintApp() {
             preferences.getInt("selected_duration", 15)
                 .takeIf { CommitmentPolicy.isAllowedDuration(it) } ?: 15
         )
+    }
+
+    LaunchedEffect(Unit) {
+        val saved = repository.loadCommitment()
+        if (saved != null) {
+            selectedDuration = saved.selectedDurationMinutes
+            if (saved.activeDeadlineEpochMillis > System.currentTimeMillis()) {
+                deadline = saved.activeDeadlineEpochMillis
+                screen = RpScreen.RESTRICTION
+            } else {
+                deadline = 0L
+                screen = RpScreen.HOME
+            }
+        }
+        repository.scheduleSync()
     }
 
     LaunchedEffect(selectedDuration) {
@@ -122,6 +142,11 @@ private fun RestraintApp() {
         }
         if (screen == RpScreen.RESTRICTION && now >= deadline) {
             screen = RpScreen.HOME
+            deadline = 0L
+            scope.launch {
+                repository.saveCommitment(selectedDuration, 0L)
+                repository.recordIntervention("restriction_completed", selectedDuration)
+            }
         }
     }
 
@@ -129,16 +154,29 @@ private fun RestraintApp() {
         when (screen) {
             RpScreen.HOME -> HomeScreen(
                 selectedDuration = selectedDuration,
-                onDurationSelected = { selectedDuration = it },
-                onPreviewWarning = { screen = RpScreen.WARNING }
+                onDurationSelected = {
+                    selectedDuration = it
+                    scope.launch { repository.saveCommitment(it, deadline) }
+                },
+                onPreviewWarning = {
+                    screen = RpScreen.WARNING
+                    scope.launch { repository.recordIntervention("warning_shown", selectedDuration) }
+                }
             )
             RpScreen.WARNING -> WarningScreen(
-                onReturnToSafety = { screen = RpScreen.HOME },
+                onReturnToSafety = {
+                    screen = RpScreen.HOME
+                    scope.launch { repository.recordIntervention("user_returned_to_safety", selectedDuration) }
+                },
                 onContinue = {
                     deadline = System.currentTimeMillis() +
                         CommitmentPolicy.durationMillis(selectedDuration)
                     now = System.currentTimeMillis()
                     screen = RpScreen.RESTRICTION
+                    scope.launch {
+                        repository.saveCommitment(selectedDuration, deadline)
+                        repository.recordIntervention("restriction_started", selectedDuration)
+                    }
                 }
             )
             RpScreen.RESTRICTION -> RestrictionScreen(

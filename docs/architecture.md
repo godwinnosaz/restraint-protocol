@@ -11,7 +11,7 @@ RP is a native Android application using Kotlin and Jetpack Compose. Core data i
 3. Policy — pure Kotlin duration validation and countdown arithmetic.
 4. Sync — WorkManager with connected-network constraints, batched idempotent events, and server acknowledgements.
 5. Future detection adapters — supported browser/domain signals and optional on-device classification. No content detector is implemented yet.
-6. Future enforcement adapters — platform-specific restriction strategies. No cross-app enforcement is implemented yet.
+6. Future enforcement adapters — platform-specific restriction strategies. A basic, opt-in foreground-app interruption exists for user-selected packages; device-owner enforcement and content detection are not implemented yet.
 
 ## Privacy and safety
 

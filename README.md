@@ -44,8 +44,8 @@ This initial scaffold intentionally does not include a Gradle wrapper binary. An
 ### Not yet implemented
 - Cross-app explicit-content detection.
 - WhatsApp or video-call inspection.
-- App blocking or device-owner enforcement.
-- Root integration.
+- Device-owner or root enforcement.
+- Explicit-content classification inside other apps.
 - Persistent timers across process death/reboot.
 - On-device image/video classifier.
 - Backend, account system, AI service, or blockchain.
@@ -83,11 +83,17 @@ gradle test
 gradle assembleDebug
 ```
 
-Or use Android Studio's Gradle sync, unit-test, and Run actions.
+To configure the optional server endpoint, use an HTTPS base URL:
+
+```bash
+gradle -PrpSyncBaseUrl=https://your-api.example.com test assembleDebug
+```
+
+The base URL must be a deployed Restraint Protocol backend. Account sign-in and remote sync remain optional; the app's local commitment flow works offline. Or use Android Studio's Gradle sync, unit-test, and Run actions.
 
 ## Privacy and safety
 
-The current app requests no sensitive permissions. It does not use Accessibility Services, VPN, screen capture, device administrator, root, or device-owner privileges. No content is monitored in this milestone.
+The app does not request screen capture, VPN, device administrator, or root privileges. Its optional Accessibility Service must be enabled manually and observes foreground package transitions only; it does not read screen text, messages, images, or videos. No explicit-content detector is implemented.
 
 Any future monitoring feature must be opt-in, clearly explained, limited to the intended purpose, and evaluated against Android policy and platform restrictions. A detected image alone must not automatically trigger a long lockout because classifiers can produce false positives.
 

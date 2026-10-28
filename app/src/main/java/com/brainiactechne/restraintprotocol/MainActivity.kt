@@ -118,7 +118,7 @@ private fun RestraintApp() {
     LaunchedEffect(Unit) {
         val saved = repository.loadCommitment()
         if (saved != null) {
-            selectedDuration = saved.selectedDurationMinutes
+            selectedDuration = saved.selectedDurationMinutes.takeIf { CommitmentPolicy.isAllowedDuration(it) } ?: 15
             if (saved.activeDeadlineEpochMillis > System.currentTimeMillis()) {
                 deadline = saved.activeDeadlineEpochMillis
                 screen = RpScreen.RESTRICTION

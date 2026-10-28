@@ -65,7 +65,7 @@ class LocalFirstRepository(context: Context) {
         val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
         val request = OneTimeWorkRequestBuilder<OutboxSyncWorker>().setConstraints(constraints).build()
         WorkManager.getInstance(appContext).enqueueUniqueWork(
-            OutboxSyncWorker.UNIQUE_WORK_NAME, ExistingWorkPolicy.KEEP, request
+            OutboxSyncWorker.UNIQUE_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, request
         )
     }
 }

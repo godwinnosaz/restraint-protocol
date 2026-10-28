@@ -18,7 +18,7 @@ class LocalFirstRepository(context: Context) {
     fun observePendingCount() = dao.observePendingCount()
 
     suspend fun saveCommitment(durationMinutes: Int, deadlineEpochMillis: Long) {
-        require(durationMinutes in listOf(5, 15, 30, 60, 180))
+        require(durationMinutes in listOf(15, 60, 180, 720, 1440, 4320))
         val updatedAt = System.currentTimeMillis()
         val commitment = CommitmentEntity(
             selectedDurationMinutes = durationMinutes,

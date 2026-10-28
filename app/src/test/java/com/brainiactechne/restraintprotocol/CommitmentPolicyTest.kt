@@ -8,16 +8,18 @@ import org.junit.Test
 class CommitmentPolicyTest {
     @Test
     fun acceptsOnlyConfiguredDurations() {
-        assertTrue(CommitmentPolicy.isAllowedDuration(5))
         assertTrue(CommitmentPolicy.isAllowedDuration(15))
+        assertTrue(CommitmentPolicy.isAllowedDuration(1440))
+        assertTrue(CommitmentPolicy.isAllowedDuration(4320))
         assertFalse(CommitmentPolicy.isAllowedDuration(7))
-        assertFalse(CommitmentPolicy.isAllowedDuration(1440))
+        assertFalse(CommitmentPolicy.isAllowedDuration(2880))
     }
 
     @Test
     fun convertsMinutesToMilliseconds() {
-        assertEquals(300_000L, CommitmentPolicy.durationMillis(5))
+        assertEquals(900_000L, CommitmentPolicy.durationMillis(15))
         assertEquals(3_600_000L, CommitmentPolicy.durationMillis(60))
+        assertEquals(259_200_000L, CommitmentPolicy.durationMillis(4320))
     }
 
     @Test(expected = IllegalArgumentException::class)

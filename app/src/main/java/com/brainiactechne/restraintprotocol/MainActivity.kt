@@ -253,28 +253,37 @@ private fun HomeScreen(
                     Text("  Practice a restraint warning", color = Cream, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
                 }
                 Text(
-                    "Preview the Scripture warning and timed restriction flow. This demo only restricts navigation inside RP; it does not yet block other apps.",
+                    "Preview the Scripture warning. If you enable App protection and select apps, an active timer also interrupts those apps.",
                     color = Muted,
                     fontSize = 14.sp,
                     lineHeight = 21.sp
                 )
-                Text("DEMO CONSEQUENCE", color = Amber, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(5, 15, 30, 60).forEach { minutes ->
-                        val selected = selectedDuration == minutes
-                        OutlinedButton(
-                            onClick = { onDurationSelected(minutes) },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = if (selected) Amber else Color.Transparent,
-                                contentColor = if (selected) Ink else Cream
-                            ),
-                            border = androidx.compose.foundation.BorderStroke(
-                                1.dp, if (selected) Amber else SurfaceRaised
-                            ),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(if (minutes >= 60) "1h" else "${minutes}m", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("RESTRICTION DURATION", color = Amber, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(15, 60, 180, 720, 1440, 4320).chunked(3).forEach { durationRow ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            durationRow.forEach { minutes ->
+                                val selected = selectedDuration == minutes
+                                val label = when {
+                                    minutes < 60 -> "${minutes}m"
+                                    minutes % 1440 == 0 -> "${minutes / 1440}d"
+                                    else -> "${minutes / 60}h"
+                                }
+                                OutlinedButton(
+                                    onClick = { onDurationSelected(minutes) },
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = if (selected) Amber else Color.Transparent,
+                                        contentColor = if (selected) Ink else Cream
+                                    ),
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp, if (selected) Amber else SurfaceRaised
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(label, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
                 }
@@ -467,7 +476,7 @@ private fun WarningScreen(onReturnToSafety: () -> Unit, onContinue: () -> Unit) 
         Spacer(Modifier.height(22.dp))
         Text("Pause. Remember your commitment.", color = Cream, fontSize = 27.sp, lineHeight = 33.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         Spacer(Modifier.height(10.dp))
-        Text("This is a demonstration warning. RP has not detected or analysed any content.", color = Muted, textAlign = TextAlign.Center, lineHeight = 22.sp)
+        Text("You opened this warning manually. RP has not detected or analysed any content.", color = Muted, textAlign = TextAlign.Center, lineHeight = 22.sp)
         Spacer(Modifier.height(22.dp))
         Card(colors = CardDefaults.cardColors(containerColor = SurfaceDark), shape = RoundedCornerShape(22.dp)) {
             Column(modifier = Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -497,7 +506,7 @@ private fun WarningScreen(onReturnToSafety: () -> Unit, onContinue: () -> Unit) 
             modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = RoundedCornerShape(15.dp)
         ) {
-            Text("Continue to demo restriction", color = Cream)
+            Text("Start restriction", color = Cream)
         }
     }
 }
@@ -523,7 +532,7 @@ private fun RestrictionScreen(remainingMillis: Long) {
         Spacer(Modifier.height(24.dp))
         Text("Your pause is in progress", color = Cream, fontSize = 27.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         Spacer(Modifier.height(10.dp))
-        Text("Use this time to reset. Your demo restriction ends automatically.", color = Muted, textAlign = TextAlign.Center, lineHeight = 22.sp)
+        Text("Use this time to reset. Your selected-app restriction ends automatically.", color = Muted, textAlign = TextAlign.Center, lineHeight = 22.sp)
         Spacer(Modifier.height(28.dp))
         Text(
             if (hours > 0) "%02d:%02d:%02d".format(hours, minutes, seconds) else "%02d:%02d".format(minutes, seconds),
@@ -541,6 +550,6 @@ private fun RestrictionScreen(remainingMillis: Long) {
             }
         }
         Spacer(Modifier.height(18.dp))
-        Text("Prototype limitation: this countdown only affects this screen. It does not lock Android or other applications.", color = Muted, fontSize = 12.sp, textAlign = TextAlign.Center, lineHeight = 18.sp)
+        Text("If App protection is enabled, RP interrupts the apps you selected until this timer expires. This is not a system-wide phone lock.", color = Muted, fontSize = 12.sp, textAlign = TextAlign.Center, lineHeight = 18.sp)
     }
 }

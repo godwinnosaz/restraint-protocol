@@ -8,7 +8,9 @@ An ordinary app can control its own screens and can request specific user-grante
 
 ## Accessibility services
 
-Accessibility may expose selected UI structure when the user explicitly enables a service. Coverage varies by app, secure window, and OS version. It must not be treated as a universal private-content API, and its use must meet Android and distribution-policy requirements.
+The current prototype includes an opt-in accessibility service that observes foreground window package transitions only. When a user-selected app becomes foreground while a commitment timer is active, RP opens a gate screen. It sets canRetrieveWindowContent=false and does not read text, images, messages, or video frames. The user must enable the service manually in Android Settings. This can be disabled or bypassed and is not a universal or tamper-proof lock. Distribution must comply with Android accessibility and store policies.
+
+Accessibility may expose selected UI structure only when the service requests and is permitted to retrieve it. Coverage varies by app, secure window, and OS version. RP must not treat it as a universal private-content API.
 
 ## VPN and DNS filtering
 

@@ -31,8 +31,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -48,9 +50,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.brainiactechne.restraintprotocol.data.AuthApi
 import com.brainiactechne.restraintprotocol.data.LocalFirstRepository
 import com.brainiactechne.restraintprotocol.ui.theme.Amber
 import com.brainiactechne.restraintprotocol.ui.theme.Cream
@@ -85,7 +89,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class RpScreen { HOME, WARNING, RESTRICTION }
+private enum class RpScreen { HOME, ACCOUNT, WARNING, RESTRICTION }
 
 @Composable
 private fun RestraintApp() {
@@ -154,6 +158,7 @@ private fun RestraintApp() {
         when (screen) {
             RpScreen.HOME -> HomeScreen(
                 selectedDuration = selectedDuration,
+                onAccountClick = { screen = RpScreen.ACCOUNT },
                 onDurationSelected = {
                     selectedDuration = it
                     scope.launch { repository.saveCommitment(it, deadline) }
@@ -163,6 +168,7 @@ private fun RestraintApp() {
                     scope.launch { repository.recordIntervention("warning_shown", selectedDuration) }
                 }
             )
+            RpScreen.ACCOUNT -> AccountScreen(onBack = { screen = RpScreen.HOME })
             RpScreen.WARNING -> WarningScreen(
                 onReturnToSafety = {
                     screen = RpScreen.HOME
@@ -189,6 +195,7 @@ private fun RestraintApp() {
 @Composable
 private fun HomeScreen(
     selectedDuration: Int,
+    onAccountClick: () -> Unit,
     onDurationSelected: (Int) -> Unit,
     onPreviewWarning: () -> Unit
 ) {
@@ -216,6 +223,10 @@ private fun HomeScreen(
             Column(modifier = Modifier.padding(start = 12.dp)) {
                 Text("RESTRAINT PROTOCOL", color = Amber, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
                 Text("Choose who you want to become.", color = Muted, fontSize = 12.sp)
+            }
+            Spacer(Modifier.weight(1f))
+            OutlinedButton(onClick = onAccountClick, shape = RoundedCornerShape(12.dp)) {
+                Text("Account", fontSize = 12.sp)
             }
         }
 
@@ -287,6 +298,123 @@ private fun HomeScreen(
             color = Muted,
             fontSize = 12.sp,
             lineHeight = 18.sp
+        )
+    }
+}
+
+
+@Composable
+private fun AccountScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val repository = remember(context) { LocalFirstRepository(context) }
+    val authPreferences = remember(context) {
+        context.getSharedPreferences("rp_auth", Context.MODE_PRIVATE)
+    }
+    var hasToken by remember { mutableStateOf(!authPreferences.getString("access_token", null).isNullOrBlank()) }
+    var register by remember { mutableStateOf(false) }
+    var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("Account & sync", color = Cream, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "RP works offline. Sign in only when you want your commitment metadata and intervention events synced to your account.",
+            color = Muted, lineHeight = 22.sp
+        )
+        Spacer(Modifier.height(20.dp))
+        if (hasToken) {
+            Text("You are signed in on this device.", color = Sage, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(8.dp))
+            Text("Pending records stay on this device until the configured server acknowledges them.", color = Muted, lineHeight = 21.sp)
+            Spacer(Modifier.height(16.dp))
+            OutlinedButton(
+                onClick = {
+                    authPreferences.edit().remove("access_token").apply()
+                    hasToken = false
+                    message = "Signed out. Your local data and pending sync queue were kept."
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Sign out") }
+        } else {
+            if (register) {
+                OutlinedTextField(
+                    value = username, onValueChange = { username = it },
+                    label = { Text("Username") }, singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(10.dp))
+            }
+            OutlinedTextField(
+                value = email, onValueChange = { email = it },
+                label = { Text("Email") }, singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(10.dp))
+            OutlinedTextField(
+                value = password, onValueChange = { password = it },
+                label = { Text("Password") }, singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(14.dp))
+            Button(
+                onClick = {
+                    if (email.isBlank() || password.isBlank() || (register && username.isBlank())) {
+                        message = "Complete all required fields."
+                    } else {
+                        busy = true
+                        message = ""
+                        scope.launch {
+                            try {
+                                val token = AuthApi.authenticate(
+                                    username.takeIf { register }, email.trim(), password, register
+                                )
+                                authPreferences.edit().putString("access_token", token).apply()
+                                hasToken = true
+                                repository.scheduleSync()
+                                message = "Signed in. RP will sync queued records when a network is available."
+                            } catch (error: Exception) {
+                                message = error.message ?: "Unable to connect. Your local data is safe."
+                            } finally {
+                                busy = false
+                            }
+                        }
+                    }
+                },
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Amber, contentColor = Ink)
+            ) {
+                Text(
+                    if (busy) "Connecting…" else if (register) "Create account" else "Sign in",
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            OutlinedButton(
+                onClick = { register = !register; message = "" },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (register) "Already have an account? Sign in" else "Create a new account")
+            }
+        }
+        if (message.isNotBlank()) {
+            Spacer(Modifier.height(12.dp))
+            Text(message, color = if (hasToken) Sage else Rose, lineHeight = 21.sp)
+        }
+        Spacer(Modifier.height(18.dp))
+        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Back") }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            "Server sync requires an HTTPS API URL configured at build time. Signing in is optional; core commitments and interventions remain available offline.",
+            color = Muted, fontSize = 12.sp, lineHeight = 18.sp
         )
     }
 }

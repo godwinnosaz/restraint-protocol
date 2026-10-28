@@ -17,11 +17,13 @@ RP does not queue images, screenshots, messages, page contents, video-call conte
 
 WorkManager schedules a unique job with a connected-network constraint. Android waits while the device is offline and runs the job when a network becomes available. Temporary network/server errors are retried. Events are marked synced only when the server acknowledges their IDs in acceptedIds.
 
-The outbox is retained if no endpoint is configured. Configure the endpoint at build time:
+The outbox is retained if no endpoint is configured. The app now includes an optional Account screen for registering or signing in against the existing backend auth API. After successful sign-in, the JWT is stored in app-private preferences and the sync worker uses it as a Bearer token. Local functionality does not require an account.
+
+Configure the endpoint at build time:
 
     gradle -PrpSyncBaseUrl=https://your-api.example.com test assembleDebug
 
-HTTPS is required by the app manifest.
+HTTPS is required by the app manifest. Example for a deployed API: https://api.example.com. Do not ship a build configured with an untrusted endpoint.
 
 ## API contract (v1)
 

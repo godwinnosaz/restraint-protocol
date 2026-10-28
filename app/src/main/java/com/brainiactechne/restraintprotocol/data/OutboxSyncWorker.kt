@@ -56,7 +56,10 @@ class OutboxSyncWorker(appContext: Context, params: WorkerParameters) : Coroutin
             if (status !in 200..299) return Result.failure()
 
             val responseText = connection.inputStream.bufferedReader().use { it.readText() }
-            val accepted = JSONObject(responseText).optJSONArray("acceptedIds") ?: return Result.retry()
+            val response = JSONObject(responseText)
+            val accepted = response.optJSONArray("acceptedIds")
+                ?: response.optJSONObject("data")?.optJSONArray("acceptedIds")
+                ?: return Result.retry()
             val batchIds = batch.map { it.id }.toSet()
             val acceptedIds = buildList {
                 for (index in 0 until accepted.length()) {

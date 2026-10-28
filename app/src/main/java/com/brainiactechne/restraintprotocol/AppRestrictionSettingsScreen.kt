@@ -49,12 +49,21 @@ fun AppRestrictionSettingsScreen(onBack: () -> Unit) {
     }
     val apps = remember(context) {
         val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val defaultDialer = context.getSystemService(android.telecom.TelecomManager::class.java)?.defaultDialerPackage
         @Suppress("DEPRECATION")
         context.packageManager.queryIntentActivities(launcherIntent, 0)
             .mapNotNull { info ->
                 val packageName = info.activityInfo?.packageName ?: return@mapNotNull null
-                if (packageName == context.packageName) null
-                else LaunchableApp(packageName, info.loadLabel(context.packageManager).toString())
+                val label = info.loadLabel(context.packageManager).toString()
+                val normalized = (packageName + " " + label).lowercase()
+                val essential = packageName == context.packageName ||
+                    packageName == defaultDialer ||
+                    packageName == "com.android.phone" ||
+                    packageName == "com.android.server.telecom" ||
+                    packageName == "com.android.settings" ||
+                    normalized.contains("emergency dialer") ||
+                    normalized.contains("emergency call")
+                if (essential) null else LaunchableApp(packageName, label)
             }
             .distinctBy { it.packageName }
             .sortedBy { it.label.lowercase() }
@@ -101,7 +110,7 @@ fun AppRestrictionSettingsScreen(onBack: () -> Unit) {
                 }
             }
         }
-        Text("Safety: keep Phone, emergency calling, and other essential apps unselected. This opt-in mechanism can be disabled in Android settings and is not an unbreakable lock.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
+        Text("Phone/dialer, emergency-related entries, Android Settings, and RP itself are excluded from the selectable list. Keep other essential apps unselected. This opt-in mechanism can be disabled in Android settings and is not an unbreakable lock.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
         OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Back", color = Sage) }
     }
 }

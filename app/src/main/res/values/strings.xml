@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">Interrupts user-selected apps while a Restraint Protocol commitment timer is active. RP observes app transitions only and does not read screen content.</string>
+</resources>

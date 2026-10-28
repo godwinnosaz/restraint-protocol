@@ -89,7 +89,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class RpScreen { HOME, ACCOUNT, WARNING, RESTRICTION }
+private enum class RpScreen { HOME, ACCOUNT, APP_SETTINGS, WARNING, RESTRICTION }
 
 @Composable
 private fun RestraintApp() {
@@ -159,6 +159,7 @@ private fun RestraintApp() {
             RpScreen.HOME -> HomeScreen(
                 selectedDuration = selectedDuration,
                 onAccountClick = { screen = RpScreen.ACCOUNT },
+                onAppProtectionClick = { screen = RpScreen.APP_SETTINGS },
                 onDurationSelected = {
                     selectedDuration = it
                     scope.launch { repository.saveCommitment(it, deadline) }
@@ -169,6 +170,7 @@ private fun RestraintApp() {
                 }
             )
             RpScreen.ACCOUNT -> AccountScreen(onBack = { screen = RpScreen.HOME })
+            RpScreen.APP_SETTINGS -> AppRestrictionSettingsScreen(onBack = { screen = RpScreen.HOME })
             RpScreen.WARNING -> WarningScreen(
                 onReturnToSafety = {
                     screen = RpScreen.HOME
@@ -196,6 +198,7 @@ private fun RestraintApp() {
 private fun HomeScreen(
     selectedDuration: Int,
     onAccountClick: () -> Unit,
+    onAppProtectionClick: () -> Unit,
     onDurationSelected: (Int) -> Unit,
     onPreviewWarning: () -> Unit
 ) {
@@ -282,6 +285,19 @@ private fun HomeScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = Amber, contentColor = Ink)
                 ) {
                     Text("Preview intervention", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        Card(colors = CardDefaults.cardColors(containerColor = SurfaceDark), shape = RoundedCornerShape(22.dp)) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("App protection", color = Cream, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Choose apps RP should interrupt while a commitment timer is active. Android requires you to enable the accessibility service yourself.",
+                    color = Muted, fontSize = 13.sp, lineHeight = 20.sp
+                )
+                OutlinedButton(onClick = onAppProtectionClick, modifier = Modifier.fillMaxWidth()) {
+                    Text("Configure protected apps")
                 }
             }
         }

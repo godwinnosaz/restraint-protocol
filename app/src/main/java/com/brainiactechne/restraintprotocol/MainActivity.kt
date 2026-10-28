@@ -1,5 +1,6 @@
 package com.brainiactechne.restraintprotocol
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -43,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -84,12 +86,36 @@ private enum class RpScreen { HOME, WARNING, RESTRICTION }
 
 @Composable
 private fun RestraintApp() {
-    var screen by remember { mutableStateOf(RpScreen.HOME) }
-    var selectedDuration by remember { mutableIntStateOf(15) }
-    var deadline by remember { mutableLongStateOf(0L) }
+    val context = LocalContext.current
+    val preferences = remember(context) {
+        context.getSharedPreferences("rp_commitments", Context.MODE_PRIVATE)
+    }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var deadline by remember {
+        mutableLongStateOf(preferences.getLong("restriction_deadline", 0L))
+    }
+    var screen by remember {
+        mutableStateOf(
+            if (deadline > now) RpScreen.RESTRICTION else RpScreen.HOME
+        )
+    }
+    var selectedDuration by remember {
+        mutableIntStateOf(
+            preferences.getInt("selected_duration", 15)
+                .takeIf { CommitmentPolicy.isAllowedDuration(it) } ?: 15
+        )
+    }
+
+    LaunchedEffect(selectedDuration) {
+        preferences.edit().putInt("selected_duration", selectedDuration).apply()
+    }
 
     LaunchedEffect(screen, deadline) {
+        if (screen == RpScreen.RESTRICTION && deadline > 0L) {
+            preferences.edit().putLong("restriction_deadline", deadline).apply()
+        } else if (screen == RpScreen.HOME) {
+            preferences.edit().remove("restriction_deadline").apply()
+        }
         while (screen == RpScreen.RESTRICTION && now < deadline) {
             delay(1_000)
             now = System.currentTimeMillis()
